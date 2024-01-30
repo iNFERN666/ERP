@@ -109,49 +109,64 @@
     }
 
     // Function to update stock entry
-    function updateStock(materialCode, price) {
-      // Get the updated quantity (you can use a prompt or another UI method)
-      const updatedQuantityInput = prompt(`Enter updated quantity for Material Code ${materialCode} and Price ${price}`);
+    // Function to update stock entry
+function updateStock(materialCode, price) {
+  // Get the updated quantity (you can use a prompt or another UI method)
+  const updatedQuantityInput = prompt(`Enter updated quantity for Material Code ${materialCode} and Price ${price}`);
 
-      // Convert the input to a floating-point number
-      const updatedQuantity = parseFloat(updatedQuantityInput);
+  // Convert the input to a floating-point number
+  const updatedQuantity = parseFloat(updatedQuantityInput);
 
-      // Validate if the entered quantity is a valid number
-      if (isNaN(updatedQuantity)) {
-        alert('Please enter a valid quantity.');
-        return;
-      }
+  // Validate if the entered quantity is a valid number
+  if (isNaN(updatedQuantity)) {
+    alert('Please enter a valid quantity.');
+    return;
+  }
 
-      // Update the entry in the database
-      const databaseRef = firebase.database().ref('goodReceipts');
-      const query = databaseRef.orderByChild('materialCode').equalTo(materialCode);
+  // Update the entry in the database
+  const databaseRef = firebase.database().ref('goodReceipts');
+  const query = databaseRef.orderByChild('materialCode').equalTo(materialCode);
 
-      query.once('value', (snapshot) => {
-        const matchingEntries = snapshot.val();
+  query.once('value', (snapshot) => {
+    const matchingEntries = snapshot.val();
 
-        if (matchingEntries) {
-          Object.keys(matchingEntries).forEach((key) => {
-            const entry = matchingEntries[key];
+    if (matchingEntries) {
+      Object.keys(matchingEntries).forEach((key) => {
+        const entry = matchingEntries[key];
 
-            // Use loose equality (==) to allow type coercion
-            if (entry.price == price) {
-              databaseRef.child(key).update({
-                  quantity: updatedQuantity
-                })
-                .then(() => {
-                  console.log(`Quantity updated for Material Code ${materialCode} and Price ${price}`);
-                  displayStock(); // Refresh the table after updating
-                })
-                .catch((error) => {
-                  console.error('Error updating quantity:', error);
-                });
-            }
-          });
-        } else {
-          console.warn(`No entry found for Material Code ${materialCode} and Price ${price}`);
+        // Use loose equality (==) to allow type coercion
+        if (entry.price == price) {
+          if (updatedQuantity === 0) {
+            // If the updated quantity is 0, remove the entry from the database
+            databaseRef.child(key).remove()
+              .then(() => {
+                console.log(`Entry removed for Material Code ${materialCode} and Price ${price}`);
+                displayStock(); // Refresh the table after removing
+              })
+              .catch((error) => {
+                console.error('Error removing entry:', error);
+              });
+          } else {
+            // If the updated quantity is not 0, update the quantity
+            databaseRef.child(key).update({
+                quantity: updatedQuantity
+              })
+              .then(() => {
+                console.log(`Quantity updated for Material Code ${materialCode} and Price ${price}`);
+                displayStock(); // Refresh the table after updating
+              })
+              .catch((error) => {
+                console.error('Error updating quantity:', error);
+              });
+          }
         }
       });
+    } else {
+      console.warn(`No entry found for Material Code ${materialCode} and Price ${price}`);
     }
+  });
+}
+
 
     function submitGoodReceipt(event) {
       event.preventDefault();
