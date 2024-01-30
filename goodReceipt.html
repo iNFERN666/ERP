@@ -191,7 +191,42 @@ function addNewEntry(materialCode, materialDescription, price, quantity) {
     }
   
 
+    // Functie pentru pornirea camerei
     function startCamera() {
+      const cameraFeed = document.getElementById('cameraFeed');
+
+      // Obtine informatii despre dispozitivele media (camere)
+      navigator.mediaDevices.enumerateDevices()
+        .then(devices => {
+          const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+          if (videoDevices.length === 0) {
+            console.error('Nu s-au gasit camere video disponibile.');
+            return;
+          }
+
+          // Afiseaza o lista cu camerele disponibile si permite utilizatorului sa aleaga una
+          const cameraSelect = document.createElement('select');
+          cameraSelect.addEventListener('change', () => {
+            startCameraStream(cameraSelect.value);
+          });
+
+          videoDevices.forEach((device, index) => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = `Camera ${index + 1}`;
+            cameraSelect.appendChild(option);
+          });
+
+          document.body.insertBefore(cameraSelect, document.getElementById('cameraFeed'));
+        })
+        .catch(error => {
+          console.error('Eroare la enumerarea dispozitivelor media:', error);
+        });
+    }
+
+    // Functie pentru pornirea fluxului de date video de pe camera selectata
+    function startCameraStream(deviceId) {
       const cameraFeed = document.getElementById('cameraFeed');
 
       Quagga.init({
@@ -199,43 +234,41 @@ function addNewEntry(materialCode, materialDescription, price, quantity) {
           name: 'Live',
           type: 'LiveStream',
           target: cameraFeed,
+          constraints: {
+            deviceId: deviceId
+          }
         },
         decoder: {
-          readers: ['code_128_reader'], // You can add more readers if needed
+          readers: ['code_128_reader'], // Puteți adăuga mai mulți cititori dacă este necesar
         },
         canvas: {
-          willReadFrequently: true, // Set willReadFrequently to true for better performance
+          willReadFrequently: true, // Set willReadFrequently la true pentru o performanță mai bună
         },
       }, (err) => {
         if (err) {
-          console.error('Error initializing Quagga:', err);
+          console.error('Eroare la inițializarea Quagga:', err);
           return;
         }
 
         Quagga.onDetected((result) => {
           // Log the entire result object
-          console.log('Barcode detection result:', result);
+          console.log('Rezultatul detectării codului de bare:', result);
 
-          // Check if the code property exists in result.codeResult and log it
+          // Verificați dacă proprietatea code există în result.codeResult și o logați
           if (result.codeResult && 'code' in result.codeResult) {
-            console.log('Barcode code:', result.codeResult.code);
+            console.log('Codul codului de bare:', result.codeResult.code);
 
-            // Handle barcode detection
-            const materialCodeInput = document.getElementById('materialCode');
-            materialCodeInput.value = result.codeResult.code;
+            // Manipulați detectarea codului de bare aici
           } else {
-            console.error('Barcode detected, but code property is missing.');
+            console.error('Codul de bare detectat, dar proprietatea code este lipsă.');
           }
         });
 
         Quagga.start();
-
-        // Show the camera feed
-        cameraFeed.style.display = 'block';
       });
     }
 
-    // Call the function to start the camera when the page loads
+    // Apelarea funcției pentru a porni camera atunci când pagina este încărcată complet
     window.onload = startCamera;
 
 
