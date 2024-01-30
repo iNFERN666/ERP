@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trimitere text la Firebase</title>
+</head>
+<body>
+  <h1>Trimitere text la Firebase</h1>
+  <textarea id="textDeTrimis" placeholder="Introduceți textul de trimis"></textarea>
+  <button onclick="trimiteTextLaFirebase()">Trimite la Firebase</button>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  
+  <script>
+const firebaseConfig = {
+    apiKey: "AIzaSyCocj-iFXprN6X3lDc6Cu3xaNkCfRiUY20",
+    authDomain: "nextgenfactory-future.firebaseapp.com",
+    databaseURL: "https://nextgenfactory-future-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "nextgenfactory-future",
+    storageBucket: "nextgenfactory-future.appspot.com",
+    messagingSenderId: "656505366836",
+    appId: "1:656505366836:web:f1de79770057bcf3b8dd61",
+    measurementId: "G-YVXHQ93EVT"
+  };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = app.database();
+
+    function trimiteTextLaFirebase() {
+      const text = document.getElementById('textDeTrimis').value;
+
+      const reference = database.ref('texte');
+      reference.push({
+        content: text
+      }, (error) => {
+        if (error) {
+          console.error('A apărut o eroare:', error);
+        } else {
+          console.log('Textul a fost trimis cu succes la bază de date.');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Styled Good Receipt</title>
+  <style>
+    /* Your existing styles remain unchanged */
+
+    /* Add styles for the table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #336699;
+      color: #fff;
+    }
+
+    /* Add styles for update button */
+    .updateButton {
+      background-color: #1e4b8d;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Verify Stock</h2>
+  <form id="goodReceiptForm">
+    <!-- Your existing form fields remain unchanged -->
+
+    <input type="submit" value="Submit" onclick="submitGoodReceipt(event)">
+  </form>
+
+  <!-- Display table for stock verification -->
+  <table id="stockTable">
+    <tr>
+      <th>Material Description</th>
+      <th>Material Code</th>
+      <th>Total Quantity</th>
+      <th>Price (Purchase)</th>
+      <th>Action</th>
+    </tr>
+    <!-- Table rows will be dynamically added here -->
+  </table>
+  <!-- Firebase scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    // Your Firebase configuration here
+    const firebaseConfig = {
+      apiKey: "AIzaSyCocj-iFXprN6X3lDc6Cu3xaNkCfRiUY20",
+      authDomain: "nextgenfactory-future.firebaseapp.com",
+      databaseURL: "https://nextgenfactory-future-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "nextgenfactory-future",
+      storageBucket: "nextgenfactory-future.appspot.com",
+      messagingSenderId: "656505366836",
+      appId: "1:656505366836:web:6de30ad6040345a2b8dd61",
+      measurementId: "G-CJC3F3QHY9"
+    };
+
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    // Function to display aggregated stock in a table
+    function displayStock() {
+      const stockTable = document.getElementById('stockTable');
+      const databaseRef = firebase.database().ref('goodReceipts');
+
+      databaseRef.once('value', (snapshot) => {
+        const stockData = snapshot.val();
+
+        // Clear existing rows
+        stockTable.innerHTML = '<tr><th>Material Description</th><th>Material Code</th><th>Total Quantity</th><th>Price (Purchase)</th><th>Action</th></tr>';
+
+        if (stockData) {
+          Object.keys(stockData).forEach((key) => {
+            const stockEntry = stockData[key];
+
+            // Add a new row for each entry
+            const row = stockTable.insertRow(-1);
+            const cell1 = row.insertCell(0);
+            const cell2 = row.insertCell(1);
+            const cell3 = row.insertCell(2);
+            const cell4 = row.insertCell(3);
+            const cell5 = row.insertCell(4);
+
+            cell1.innerHTML = stockEntry.materialDescription || '-';
+            cell2.innerHTML = stockEntry.materialCode || '-';
+            cell3.innerHTML = stockEntry.quantity || '-';
+            cell4.innerHTML = stockEntry.price || '-';
+            cell5.innerHTML = `<button class="updateButton" onclick="updateStock('${stockEntry.materialCode}', '${stockEntry.price}')">Update</button>`;
+          });
+        }
+      });
+    }
+
+    // Function to update stock entry
+    function updateStock(materialCode, price) {
+      // Get the updated quantity (you can use a prompt or another UI method)
+      const updatedQuantityInput = prompt(`Enter updated quantity for Material Code ${materialCode} and Price ${price}`);
+
+      // Convert the input to a floating-point number
+      const updatedQuantity = parseFloat(updatedQuantityInput);
+
+      // Validate if the entered quantity is a valid number
+      if (isNaN(updatedQuantity)) {
+        alert('Please enter a valid quantity.');
+        return;
+      }
+
+      // Update the entry in the database
+      const databaseRef = firebase.database().ref('goodReceipts');
+      const query = databaseRef.orderByChild('materialCode').equalTo(materialCode);
+
+      query.once('value', (snapshot) => {
+        const matchingEntries = snapshot.val();
+
+        if (matchingEntries) {
+          Object.keys(matchingEntries).forEach((key) => {
+            const entry = matchingEntries[key];
+
+            // Use loose equality (==) to allow type coercion
+            if (entry.price == price) {
+              databaseRef.child(key).update({
+                  quantity: updatedQuantity
+                })
+                .then(() => {
+                  console.log(`Quantity updated for Material Code ${materialCode} and Price ${price}`);
+                  displayStock(); // Refresh the table after updating
+                })
+                .catch((error) => {
+                  console.error('Error updating quantity:', error);
+                });
+            }
+          });
+        } else {
+          console.warn(`No entry found for Material Code ${materialCode} and Price ${price}`);
+        }
+      });
+    }
+
+    function submitGoodReceipt(event) {
+      event.preventDefault();
+
+      // Retrieve the values from the form fields
+      const materialCode = document.getElementById('materialCode').value;
+      const price = parseFloat(document.getElementById('price').value);
+      const quantity = parseFloat(document.getElementById('quantity').value);
+
+      // ... Your existing logic for submitting the good receipt ...
+
+      // Optionally, you can call displayStock() after submitting the good receipt
+      displayStock();
+    }
+
+    // Call the function to display stock when the page loads
+    window.onload = () => {
+      displayStock();
+    };
+  </script>
+</body>
+
+</html>

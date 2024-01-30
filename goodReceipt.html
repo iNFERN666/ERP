@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Styled Good Receipt</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      overflow-y: hidden;
+      /* Hide vertical scrollbar */
+    }
+
+    h2 {
+      font-size: 1.8em;
+      color: #336699;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #336699;
+    }
+
+    #cameraWindow {
+      width: 200px;
+      height: 400px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    #cameraFeed {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .drawingBuffer {
+      width: 5%;
+      height: 20%;
+      margin-top: 20px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="submit"] {
+      width: calc(100% - 20px);
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    input[type="submit"] {
+      background-color: #336699;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #1e4b8d;
+    }
+
+    /* Hide scrollbar for WebKit browsers */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Good Receipt</h2>
+  <form id="goodReceiptForm">
+    <div id="cameraFeed"></div>
+    <label for="materialDescription">Material Description:</label>
+    <input type="text" id="materialDescription" name="materialDescription" required><br><br>
+
+    <label for="materialCode">Material Code:</label>
+    <input type="text" id="materialCode" name="materialCode" required oninput="updateMaterialDescription()"><br><br>
+
+    <label for="quantity">Quantity:</label>
+    <input type="number" id="quantity" name="quantity" required><br><br>
+
+    <label for="price">Price:</label>
+    <input type="number" id="price" name="price" required><br><br>
+
+    <input type="submit" value="Submit" onclick="submitGoodReceipt(event)">
+  </form>
+
+  <!-- Firebase scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+
+  <script>
+    // Your Firebase configuration here
+    const firebaseConfig = {
+      apiKey: "AIzaSyCocj-iFXprN6X3lDc6Cu3xaNkCfRiUY20",
+      authDomain: "nextgenfactory-future.firebaseapp.com",
+      databaseURL: "https://nextgenfactory-future-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "nextgenfactory-future",
+      storageBucket: "nextgenfactory-future.appspot.com",
+      messagingSenderId: "656505366836",
+      appId: "1:656505366836:web:6de30ad6040345a2b8dd61",
+      measurementId: "G-CJC3F3QHY9"
+    };
+
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    function submitGoodReceipt(event) {
+  event.preventDefault();
+
+  const materialDescription = document.getElementById('materialDescription').value;
+  const materialCode = document.getElementById('materialCode').value;
+  const price = parseFloat(document.getElementById('price').value);
+  const quantity = parseFloat(document.getElementById('quantity').value);
+
+  if (isNaN(quantity)) {
+    console.error('Quantity is not a valid number.');
+    return;
+  }
+
+  console.log('Material Code:', materialCode);
+  console.log('Material Description:', materialDescription);
+  console.log('Price:', price);
+  console.log('Quantity:', quantity);
+
+  const databaseRef = firebase.database().ref('goodReceipts');
+
+  databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
+    const existingData = snapshot.val();
+
+    if (existingData) {
+      const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode && item.price === price);
+
+      if (matchingEntries.length > 0) {
+        const matchedItem = matchingEntries[0];
+        const updatedQuantity = matchedItem.quantity + quantity;
+
+        const matchedItemId = Object.keys(existingData).find(key => existingData[key].materialCode === materialCode && existingData[key].price === price);
+
+        databaseRef.child(matchedItemId).update({
+          quantity: updatedQuantity
+        })
+        .then(() => {
+          console.log('Quantity updated for existing material with the same code and price.');
+        })
+        .catch((error) => {
+          console.error('Error updating quantity:', error);
+        });
+      } else {
+        addNewEntry(materialCode, materialDescription, price, quantity);
+      }
+    } else {
+      addNewEntry(materialCode, materialDescription, price, quantity);
+    }
+  });
+}
+
+
+function addNewEntry(materialCode, materialDescription, price, quantity) {
+      const databaseRef = firebase.database().ref('goodReceipts');
+
+      databaseRef.push({
+          materialCode: materialCode,
+          materialDescription: materialDescription,
+          price: price,
+          quantity: quantity
+        })
+        .then(() => {
+          console.log('New entry added for material code:', materialCode);
+          console.log('Material Code:', materialCode);
+          console.log('Material Description:', materialDescription);
+          console.log('Price:', price);
+          console.log('Quantity:', quantity);
+        }).catch((error) => {
+          console.error('Error adding new entry:', error);
+        });
+    }
+  
+
+    function startCamera() {
+      const cameraFeed = document.getElementById('cameraFeed');
+
+      Quagga.init({
+        inputStream: {
+          name: 'Live',
+          type: 'LiveStream',
+          target: cameraFeed,
+        },
+        decoder: {
+          readers: ['code_128_reader'], // You can add more readers if needed
+        },
+        canvas: {
+          willReadFrequently: true, // Set willReadFrequently to true for better performance
+        },
+      }, (err) => {
+        if (err) {
+          console.error('Error initializing Quagga:', err);
+          return;
+        }
+
+        Quagga.onDetected((result) => {
+          // Log the entire result object
+          console.log('Barcode detection result:', result);
+
+          // Check if the code property exists in result.codeResult and log it
+          if (result.codeResult && 'code' in result.codeResult) {
+            console.log('Barcode code:', result.codeResult.code);
+
+            // Handle barcode detection
+            const materialCodeInput = document.getElementById('materialCode');
+            materialCodeInput.value = result.codeResult.code;
+          } else {
+            console.error('Barcode detected, but code property is missing.');
+          }
+        });
+
+        Quagga.start();
+
+        // Show the camera feed
+        cameraFeed.style.display = 'block';
+      });
+    }
+
+    // Call the function to start the camera when the page loads
+    window.onload = startCamera;
+
+
+    function updateMaterialDescription() {
+      const materialCodeInput = document.getElementById('materialCode');
+      const materialDescriptionInput = document.getElementById('materialDescription');
+
+      const materialCode = materialCodeInput.value;
+
+      const databaseRef = firebase.database().ref('yourDatabasePath'); // Update with your actual path
+
+      databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
+        const existingData = snapshot.val();
+
+        if (existingData) {
+          const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode);
+
+          if (matchingEntries.length > 0) {
+            // If material exists, update the material description input field
+            materialDescriptionInput.value = matchingEntries[0].materialDescription;
+          } else {
+            // If material doesn't exist, leave the material description input field unchanged
+          }
+        } else {
+          // If no data exists, leave the material description input field unchanged
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>

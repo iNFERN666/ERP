@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Inventory</title>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .material {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .material:hover {
+            transform: scale(1.03);
+            cursor: pointer;
+        }
+
+        .material h3 {
+            margin-top: 0;
+        }
+
+        .material p {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="materialInventory" style="height: calc(100vh - 40px);">
+        <!-- Content will be loaded here -->
+    </div>
+
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCocj-iFXprN6X3lDc6Cu3xaNkCfRiUY20",
+            authDomain: "nextgenfactory-future.firebaseapp.com",
+            databaseURL: "https://nextgenfactory-future-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "nextgenfactory-future",
+            storageBucket: "nextgenfactory-future.appspot.com",
+            messagingSenderId: "656505366836",
+            appId: "1:656505366836:web:6de30ad6040345a2b8dd61",
+            measurementId: "G-CJC3F3QHY9"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        // Reference to your Firebase database
+        const database = firebase.database().ref('goodReceipts');
+
+        // Function to display materials
+        function displayMaterials(snapshot) {
+            const materialInventory = document.getElementById('materialInventory');
+            materialInventory.innerHTML = ''; // Clear previous content
+
+            const aggregatedMaterials = {}; // Object to store aggregated quantities based on material code
+
+            snapshot.forEach((childSnapshot) => {
+                const material = childSnapshot.val();
+                const materialCode = material.materialCode;
+
+                // If material already exists in the aggregated object, add the quantity
+                if (aggregatedMaterials.hasOwnProperty(materialCode)) {
+                    aggregatedMaterials[materialCode].quantity += material.quantity;
+                } else {
+                    // Otherwise, create a new entry in the aggregated object
+                    aggregatedMaterials[materialCode] = {
+                        materialDescription: material.materialDescription,
+                        quantity: material.quantity
+                    };
+                }
+            });
+
+            // Iterate through the aggregated object and display each material
+            for (const [materialCode, data] of Object.entries(aggregatedMaterials)) {
+                const materialDiv = document.createElement('div');
+                materialDiv.classList.add('material');
+                materialDiv.innerHTML = `
+                    <h3>${data.materialDescription}</h3>
+                    <p>Material Code: ${materialCode}</p>
+                    <p>Quantity: ${data.quantity}</p>
+                `;
+                materialInventory.appendChild(materialDiv);
+            }
+        }
+
+        // Read data from Firebase and display
+        database.on('value', (snapshot) => {
+            displayMaterials(snapshot);
+        });
+    </script>
+</body>
+
+</html>
