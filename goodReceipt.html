@@ -11,7 +11,7 @@
       margin: 0;
       padding: 20px;
       overflow-y: hidden;
-      /* Hide vertical scrollbar */
+      /* Ascunde bara de derulare verticală */
     }
 
     h2 {
@@ -26,24 +26,12 @@
       color: #336699;
     }
 
-    #cameraWindow {
-      width: 200px;
+    #cameraFeed {
+      width: 100%;
       height: 400px;
       border: 1px solid #ccc;
       margin-top: 20px;
       overflow: hidden;
-    }
-
-    #cameraFeed {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .drawingBuffer {
-      width: 5%;
-      height: 20%;
-      margin-top: 20px;
     }
 
     input[type="text"],
@@ -68,7 +56,7 @@
       background-color: #1e4b8d;
     }
 
-    /* Hide scrollbar for WebKit browsers */
+    /* Ascunde bara de derulare pentru browserele WebKit */
     ::-webkit-scrollbar {
       display: none;
     }
@@ -79,10 +67,10 @@
 
   <h2>Good Receipt</h2>
   <form id="goodReceiptForm">
+    <select id="cameraSelect"></select>
     <div id="cameraFeed"></div>
     <label for="materialDescription">Material Description:</label>
-    <input type="text" id="materialDescription" name="materialDescription" required onfocus="updateMaterialDescription()">
-    
+    <input type="text" id="materialDescription" name="materialDescription" required><br><br>
 
     <label for="materialCode">Material Code:</label>
     <input type="text" id="materialCode" name="materialCode" required oninput="updateMaterialDescription()"><br><br>
@@ -119,81 +107,10 @@
       firebase.initializeApp(firebaseConfig);
     }
 
-    function submitGoodReceipt(event) {
-  event.preventDefault();
-
-  const materialDescription = document.getElementById('materialDescription').value;
-  const materialCode = document.getElementById('materialCode').value;
-  const price = parseFloat(document.getElementById('price').value);
-  const quantity = parseFloat(document.getElementById('quantity').value);
-
-  if (isNaN(quantity)) {
-    console.error('Quantity is not a valid number.');
-    return;
-  }
-
-  console.log('Material Code:', materialCode);
-  console.log('Material Description:', materialDescription);
-  console.log('Price:', price);
-  console.log('Quantity:', quantity);
-
-  const databaseRef = firebase.database().ref('goodReceipts');
-
-  databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
-    const existingData = snapshot.val();
-
-    if (existingData) {
-      const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode && item.price === price);
-
-      if (matchingEntries.length > 0) {
-        const matchedItem = matchingEntries[0];
-        const updatedQuantity = matchedItem.quantity + quantity;
-
-        const matchedItemId = Object.keys(existingData).find(key => existingData[key].materialCode === materialCode && existingData[key].price === price);
-
-        databaseRef.child(matchedItemId).update({
-          quantity: updatedQuantity
-        })
-        .then(() => {
-          console.log('Quantity updated for existing material with the same code and price.');
-        })
-        .catch((error) => {
-          console.error('Error updating quantity:', error);
-        });
-      } else {
-        addNewEntry(materialCode, materialDescription, price, quantity);
-      }
-    } else {
-      addNewEntry(materialCode, materialDescription, price, quantity);
-    }
-  });
-}
-
-
-function addNewEntry(materialCode, materialDescription, price, quantity) {
-      const databaseRef = firebase.database().ref('goodReceipts');
-
-      databaseRef.push({
-          materialCode: materialCode,
-          materialDescription: materialDescription,
-          price: price,
-          quantity: quantity
-        })
-        .then(() => {
-          console.log('New entry added for material code:', materialCode);
-          console.log('Material Code:', materialCode);
-          console.log('Material Description:', materialDescription);
-          console.log('Price:', price);
-          console.log('Quantity:', quantity);
-        }).catch((error) => {
-          console.error('Error adding new entry:', error);
-        });
-    }
-  
-
-    // Functie pentru pornirea camerei
+    // Funcție pentru a porni camera
     function startCamera() {
       const cameraFeed = document.getElementById('cameraFeed');
+      const cameraSelect = document.getElementById('cameraSelect');
 
       // Obtine informatii despre dispozitivele media (camere)
       navigator.mediaDevices.enumerateDevices()
@@ -205,12 +122,7 @@ function addNewEntry(materialCode, materialDescription, price, quantity) {
             return;
           }
 
-          // Afiseaza o lista cu camerele disponibile si permite utilizatorului sa aleaga una
-          const cameraSelect = document.createElement('select');
-          cameraSelect.addEventListener('change', () => {
-            startCameraStream(cameraSelect.value);
-          });
-
+          // Adauga camerele disponibile in lista de selectare
           videoDevices.forEach((device, index) => {
             const option = document.createElement('option');
             option.value = device.deviceId;
@@ -218,11 +130,17 @@ function addNewEntry(materialCode, materialDescription, price, quantity) {
             cameraSelect.appendChild(option);
           });
 
-          document.body.insertBefore(cameraSelect, document.getElementById('cameraFeed'));
+          // Porneste camera cu dispozitivul selectat
+          startCameraStream(cameraSelect.value);
         })
         .catch(error => {
           console.error('Eroare la enumerarea dispozitivelor media:', error);
         });
+
+      // Adauga un eveniment pentru schimbarea camerei selectate
+      cameraSelect.addEventListener('change', () => {
+        startCameraStream(cameraSelect.value);
+      });
     }
 
     // Functie pentru pornirea fluxului de date video de pe camera selectata
@@ -250,20 +168,6 @@ function addNewEntry(materialCode, materialDescription, price, quantity) {
           return;
         }
 
-        Quagga.onDetected((result) => {
-          // Log the entire result object
-          console.log('Rezultatul detectării codului de bare:', result);
-
-          // Verificați dacă proprietatea code există în result.codeResult și o logați
-          if (result.codeResult && 'code' in result.codeResult) {
-            console.log('Codul codului de bare:', result.codeResult.code);
-
-            // Manipulați detectarea codului de bare aici
-          } else {
-            console.error('Codul de bare detectat, dar proprietatea code este lipsă.');
-          }
-        });
-
         Quagga.start();
       });
     }
@@ -271,33 +175,104 @@ function addNewEntry(materialCode, materialDescription, price, quantity) {
     // Apelarea funcției pentru a porni camera atunci când pagina este încărcată complet
     window.onload = startCamera;
 
-
+    // Funcție pentru a actualiza descrierea materialului bazată pe codul materialului
     function updateMaterialDescription() {
-  const materialCodeInput = document.getElementById('materialCode');
-  const materialDescriptionInput = document.getElementById('materialDescription');
+      const materialCodeInput = document.getElementById('materialCode');
+      const materialDescriptionInput = document.getElementById('materialDescription');
 
-  const materialCode = materialCodeInput.value;
+      const materialCode = materialCodeInput.value;
 
-  const databaseRef = firebase.database().ref('goodReceipts');
+      const databaseRef = firebase.database().ref('yourDatabasePath'); // Actualizați cu calea dvs. reală
 
-  databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
-    const existingData = snapshot.val();
+      databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
+        const existingData = snapshot.val();
 
-    if (existingData) {
-      const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode);
+        if (existingData) {
+          const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode);
 
-      if (matchingEntries.length > 0) {
-        // If material exists, update the material description input field
-        materialDescriptionInput.value = matchingEntries[0].materialDescription;
-      } else {
-        // If material doesn't exist, leave the material description input field unchanged
-      }
-    } else {
-      // If no data exists, leave the material description input field unchanged
+          if (matchingEntries.length > 0) {
+            // Dacă materialul există, actualizați câmpul de introducere pentru descrierea materialului
+            materialDescriptionInput.value = matchingEntries[0].materialDescription;
+          } else {
+            // Dacă materialul nu există, lăsați câmpul de introducere pentru descrierea materialului neschimbat
+          }
+        } else {
+          // Dacă nu există date, lăsați câmpul de introducere pentru descrierea materialului neschimbat
+        }
+      });
     }
-  });
-}
 
+    // Funcție pentru a trimite formularul Good Receipt
+    function submitGoodReceipt(event) {
+      event.preventDefault();
+
+      const materialDescription = document.getElementById('materialDescription').value;
+      const materialCode = document.getElementById('materialCode').value;
+      const price = parseFloat(document.getElementById('price').value);
+      const quantity = parseFloat(document.getElementById('quantity').value);
+
+      if (isNaN(quantity)) {
+        console.error('Cantitatea nu este un număr valid.');
+        return;
+      }
+
+      console.log('Cod material:', materialCode);
+      console.log('Descrierea materialului:', materialDescription);
+      console.log('Preț:', price);
+      console.log('Cantitate:', quantity);
+
+      const databaseRef = firebase.database().ref('goodReceipts');
+
+      databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
+        const existingData = snapshot.val();
+
+        if (existingData) {
+          const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode && item.price === price);
+
+          if (matchingEntries.length > 0) {
+            const matchedItem = matchingEntries[0];
+            const updatedQuantity = matchedItem.quantity + quantity;
+
+            const matchedItemId = Object.keys(existingData).find(key => existingData[key].materialCode === materialCode && existingData[key].price === price);
+
+            databaseRef.child(matchedItemId).update({
+              quantity: updatedQuantity
+            })
+              .then(() => {
+                console.log('Cantitate actualizată pentru materialul existent cu același cod și preț.');
+              })
+              .catch((error) => {
+                console.error('Eroare la actualizarea cantității:', error);
+              });
+          } else {
+            addNewEntry(materialCode, materialDescription, price, quantity);
+          }
+        } else {
+          addNewEntry(materialCode, materialDescription, price, quantity);
+        }
+      });
+    }
+
+    // Funcție pentru a adăuga o intrare nouă
+    function addNewEntry(materialCode, materialDescription, price, quantity) {
+      const databaseRef = firebase.database().ref('goodReceipts');
+
+      databaseRef.push({
+        materialCode: materialCode,
+        materialDescription: materialDescription,
+        price: price,
+        quantity: quantity
+      })
+        .then(() => {
+          console.log('Intrare nouă adăugată pentru codul materialului:', materialCode);
+          console.log('Cod material:', materialCode);
+          console.log('Descrierea materialului:', materialDescription);
+          console.log('Preț:', price);
+          console.log('Cantitate:', quantity);
+        }).catch((error) => {
+          console.error('Eroare la adăugarea unei intrări noi:', error);
+        });
+    }
   </script>
 </body>
 
