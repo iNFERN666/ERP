@@ -81,7 +81,8 @@
   <form id="goodReceiptForm">
     <div id="cameraFeed"></div>
     <label for="materialDescription">Material Description:</label>
-    <input type="text" id="materialDescription" name="materialDescription" required><br><br>
+    <input type="text" id="materialDescription" name="materialDescription" required onfocus="updateMaterialDescription()">
+    
 
     <label for="materialCode">Material Code:</label>
     <input type="text" id="materialCode" name="materialCode" required oninput="updateMaterialDescription()"><br><br>
@@ -239,30 +240,31 @@ function addNewEntry(materialCode, materialDescription, price, quantity) {
 
 
     function updateMaterialDescription() {
-      const materialCodeInput = document.getElementById('materialCode');
-      const materialDescriptionInput = document.getElementById('materialDescription');
+  const materialCodeInput = document.getElementById('materialCode');
+  const materialDescriptionInput = document.getElementById('materialDescription');
 
-      const materialCode = materialCodeInput.value;
+  const materialCode = materialCodeInput.value;
 
-      const databaseRef = firebase.database().ref('yourDatabasePath'); // Update with your actual path
+  const databaseRef = firebase.database().ref('goodReceipts');
 
-      databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
-        const existingData = snapshot.val();
+  databaseRef.orderByChild('materialCode').equalTo(materialCode).once('value', (snapshot) => {
+    const existingData = snapshot.val();
 
-        if (existingData) {
-          const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode);
+    if (existingData) {
+      const matchingEntries = Object.values(existingData).filter(item => item.materialCode === materialCode);
 
-          if (matchingEntries.length > 0) {
-            // If material exists, update the material description input field
-            materialDescriptionInput.value = matchingEntries[0].materialDescription;
-          } else {
-            // If material doesn't exist, leave the material description input field unchanged
-          }
-        } else {
-          // If no data exists, leave the material description input field unchanged
-        }
-      });
+      if (matchingEntries.length > 0) {
+        // If material exists, update the material description input field
+        materialDescriptionInput.value = matchingEntries[0].materialDescription;
+      } else {
+        // If material doesn't exist, leave the material description input field unchanged
+      }
+    } else {
+      // If no data exists, leave the material description input field unchanged
     }
+  });
+}
+
   </script>
 </body>
 
